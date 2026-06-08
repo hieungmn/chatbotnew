@@ -1,0 +1,17 @@
+{
+  "name": "centralized-faq-platform",
+  "version": "1.0.0",
+  "description": "Nền tảng quản lý và phân phối FAQ tập trung 3 màn hình",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "pg": "^8.11.5"
+  },
+  "author": "Admin",
+  "license": "ISC"
+}
