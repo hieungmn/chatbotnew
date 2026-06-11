@@ -1,321 +1,476 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Centralized FAQ - Admin CMS Dashboard</title>
+    <title>FAQ Hub Central Controller</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
-            --primary: #0B2F61;
-            --accent: #E67E22;
-            --bg: #F4F6F9;
-            --text: #333;
+            --primary-bg: #0F172A;
+            --sidebar-width: 280px;
+            --accent-blue: #3B82F6;
+            --accent-hover: #2563EB;
+            --bg-main: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-dark: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-        body { background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); line-height: 1.6; }
+
+        .app-layout { display: flex; min-height: 100vh; }
+
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background: var(--primary-bg); 
+            color: #FFFFFF; 
+            padding: 32px 24px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 40px; 
+            flex-shrink: 0;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .sidebar-brand h2 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px; }
+        .sidebar-brand p { font-size: 11px; color: var(--text-muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+
+        .tabs-nav { display: flex; flex-direction: column; gap: 8px; }
+        .tab-btn { 
+            background: none; 
+            border: none; 
+            padding: 14px 16px; 
+            font-size: 14px; 
+            font-weight: 600; 
+            color: #94A3B8; 
+            cursor: pointer; 
+            border-radius: 10px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex; 
+            align-items: center; 
+            gap: 14px; 
+            text-align: left;
+            width: 100%;
+        }
+        .tab-btn:hover { color: #FFFFFF; background: rgba(255, 255, 255, 0.04); }
+        .tab-btn.active { 
+            color: #FFFFFF; 
+            background: var(--accent-blue); 
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35); 
+        }
+
+        .main-content { flex: 1; padding: 40px; overflow-x: hidden; }
         
-        /* Menu Điều hướng Bên Trái */
-        .sidebar { width: 260px; background: var(--primary); color: white; padding: 20px 0; display: flex; flex-direction: column; }
-        .sidebar-brand { padding: 0 20px 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-menu { list-style: none; margin-top: 20px; flex: 1; }
-        .menu-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; transition: 0.2s; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left: 4px solid var(--accent); }
-        
-        /* Khung Nội Dung Chính */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .topbar { height: 60px; background: white; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 30px; font-weight: 600; font-size: 18px; }
-        .content-body { padding: 30px; flex: 1; overflow-y: auto; }
-        .tab-panel { display: none; }
+        .top-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding-bottom: 24px; 
+            margin-bottom: 32px; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+        .system-desc { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+        .server-status { font-size: 13px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+        .status-dot { width: 8px; height: 8px; background: #22C55E; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #22C55E; }
+
+        .tab-panel { display: none; background: var(--card-bg); border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.02); border: 1px solid var(--border-color); }
         .tab-panel.active { display: block; }
-        
-        /* Khối tiện ích chung */
-        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        h2 { margin-bottom: 15px; color: var(--primary); font-size: 20px; }
-        
-        /* MÀN HÌNH 1: Cấu trúc vùng Upload File */
-        .upload-zone { border: 2px dashed #CBD5E1; padding: 30px; text-align: center; border-radius: 6px; cursor: pointer; background: #F8FAFC; transition: 0.2s; }
-        .upload-zone:hover { border-color: var(--accent); background: #FFF7ED; }
-        .btn { background: var(--primary); color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
-        .btn-accent { background: var(--accent); }
-        .btn:hover { opacity: 0.9; }
-        select, input { padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 4px; margin-right: 10px; }
-        
-        /* Cấu trúc Bảng dữ liệu */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #E2E8F0; font-size: 14px; }
-        th { background: #F8FAFC; color: #64748B; font-weight: 600; }
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        .badge-miss { background: #FEE2E2; color: #EF4444; }
-        
-        /* MÀN HÌNH 3: Khu vực Studio */
-        .studio-grid { display: flex; gap: 30px; }
-        .studio-form { flex: 1; }
-        .studio-preview { width: 350px; border: 1px solid #E2E8F0; border-radius: 8px; background: #F8FAFC; overflow: hidden; height: 400px; display: flex; flex-direction: column; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
-        .form-group input, .form-group select { width: 100%; }
-        code { background: #1E293B; color: #F8FAFC; padding: 15px; border-radius: 6px; display: block; white-space: pre-wrap; font-family: monospace; font-size: 13px; margin-top: 10px; }
+
+        .form-group { margin-bottom: 24px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 10px; font-size: 14px; color: #334155; }
+        select { width: 100%; max-width: 480px; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 10px; outline: none; font-size: 14px; background-color: #FFF; color: var(--text-dark); transition: border 0.15s ease; }
+        select:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+
+        .upload-zone { border: 2px dashed #CBD5E1; padding: 40px; border-radius: 14px; text-align: center; background: #F8FAFC; cursor: pointer; transition: all 0.2s ease; margin-bottom: 24px; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent-blue); background: #EFF6FF; }
+        .upload-zone i { font-size: 44px; color: #94A3B8; margin-bottom: 16px; }
+        .upload-zone p { font-size: 14px; color: #475569; font-weight: 500; }
+        #file-info { margin-top: 12px; font-weight: 600; color: #16A34A; display: none; font-size: 14px; }
+
+        .btn { background: var(--accent-blue); color: white; border: none; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn:hover { background: var(--accent-hover); }
+        .btn:disabled { background: #94A3B8; cursor: not-allowed; box-shadow: none; }
+        .btn-refresh { background: #475569; }
+        .btn-refresh:hover { background: #334155; }
+
+        .alert { padding: 14px 20px; border-radius: 10px; margin-bottom: 24px; font-size: 14px; display: none; font-weight: 500; }
+        .alert.success { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
+        .alert.error { background: #FEE2E2; color: #B91C1C; border: 1px solid #FCA5A5; }
+
+        .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 12px; border: 1px solid var(--border-color); max-height: 420px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+        th { background: #F8FAFC; font-weight: 600; color: #475569; padding: 14px 18px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; }
+        td { padding: 14px 18px; border-bottom: 1px solid var(--border-color); vertical-align: top; word-break: break-word; color: #334155; }
+        tr:hover { background: #F8FAFC; }
+
+        .badge { display: inline-block; padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 20px; letter-spacing: 0.5px; }
+        .badge.sw { background: #DBEAFE; color: #1E40AF; }
+        .badge.cw { background: #E0F2FE; color: #0369A1; }
+        .badge.cs { background: #FFEEDC; color: #C2410C; }
+        .badge.ab { background: #DCFCE7; color: #15803D; }
+        .badge.pending { background: #FEF08A; color: #A16207; }
+
+        .test-layout { display: flex; gap: 32px; margin-top: 20px; min-height: 650px; }
+        .test-controls { flex: 1; max-width: 360px; display: flex; flex-direction: column; gap: 20px; }
+        .test-sandbox { flex: 2; border: 1px solid var(--border-color); border-radius: 16px; background: #F1F5F9; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 650px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.04); }
+        .sandbox-placeholder { text-align: center; color: var(--text-muted); padding: 20px; }
     </style>
 </head>
 <body>
 
+<div class="app-layout">
     <div class="sidebar">
-        <div class="sidebar-brand">FAQ Central CMS</div>
-        <ul class="sidebar-menu">
-            <li class="menu-item active" onclick="switchTab('tab-hub')">🗂️ Màn hình 1: FAQ Master Hub</li>
-            <li class="menu-item" onclick="switchTab('tab-analytics')">📊 Màn hình 2: Analytics & Logs</li>
-            <li class="menu-item" onclick="switchTab('tab-studio')">🎨 Màn hình 3: Widget Studio</li>
-        </ul>
-    </div>
-
-    <div class="main-content">
-        <div class="topbar" id="current-title">Màn hình 1: FAQ Master Hub</div>
-        <div class="content-body">
-
-            <div id="tab-hub" class="tab-panel active">
-                <div class="card">
-                    <h2>Đồng bộ Dữ liệu Cố định từ Excel</h2>
-                    <div style="margin-bottom: 15px;">
-                        <label>Chọn Website đích muốn nạp dữ liệu: </label>
-                        <select id="hub-site-select">
-                            <option value="s-wing">S-Wing (Trường học)</option>
-                            <option value="c-wing">C-Wing (Cựu học sinh)</option>
-                            <option value="cansuke">Cansuke (Cổng Portal hỗ trợ)</option>
-                            <option value="account">Account Business (Phần mềm)</option>
-                        </select>
-                    </div>
-                    <div class="upload-zone" onclick="document.getElementById('excel-file-input').click()">
-                        <p>📢 Kéo thả file Excel (.xlsx) vào đây hoặc <b>Bấm để chọn file từ máy tính</b></p>
-                        <input type="file" id="excel-file-input" style="display:none;" accept=".xlsx, .xls">
-                    </div>
-                    <div id="upload-status" style="margin-top:10px; font-weight:600; color:var(--accent);"></div>
-                </div>
-
-                <div class="card">
-                    <h2>Danh sách FAQ Master hiện tại (Xem nhanh từ Excel vừa nạp)</h2>
-                    <table id="excel-preview-table">
-                        <thead>
-                            <tr>
-                                <th>Data ID</th>
-                                <th>Phân loại (Category)</th>
-                                <th>Từ khóa (Keywords)</th>
-                                <th>Câu trả lời (Answer Text)</th>
-                                <th>Link điều hướng (Redirect URL)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="5" style="text-align:center; color:#94A3B8;">Chưa có dữ liệu. Vui lòng tải file Excel lên để xem cấu trúc...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="tab-analytics" class="tab-panel">
-                <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h2>Danh sách từ khóa khách hàng tìm kiếm bị trượt (Search Miss Logs)</h2>
-                        <button class="btn" onclick="loadAnalyticsData()">🔄 Tải lại dữ liệu mới</button>
-                    </div>
-                    <p style="font-size:14px; color:#64748B; margin-bottom:15px;">💡 Hãy dựa vào danh sách từ khóa hụt này để bổ sung câu trả lời tương ứng vào file Excel rồi upload lại ở Màn hình 1.</p>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Website nguồn</th>
-                                <th>Từ khóa khách gõ bị hụt</th>
-                                <th>Số lần tra cứu hụt</th>
-                                <th>Trạng thái hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody id="miss-logs-table-body">
-                            <tr><td colspan="4" style="text-align:center; color:#94A3B8;">Đang tải dữ liệu từ máy chủ trung tâm...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="tab-studio" class="tab-panel">
-                <div class="studio-grid">
-                    <div class="studio-form">
-                        <div class="card">
-                            <h2>Cấu hình Widget Nhận diện Thương hiệu</h2>
-                            <div class="form-group">
-                                <label>1. Chọn Website cấu hình:</label>
-                                <select id="studio-site-select" onchange="updateStudioPreview()">
-                                    <option value="s-wing">S-Wing Portal (Màu Navy mặc định)</option>
-                                    <option value="c-wing">C-Wing Community (Màu Xanh sáng)</option>
-                                    <option value="cansuke">Cansuke Support (Màu Cam đậm)</option>
-                                    <option value="account">Account Soft (Màu Xanh lá)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>2. Mã nhúng JavaScript cố định (Dán vào Footer trang Web vệ tinh):</label>
-                                <code id="embed-code-block">&lt;script src="https://chatbot-central-api.onrender.com/widget_embed.js"&gt;&lt;/script&gt;
-&lt;script&gt;
-    window.initCentralChatbot({ site_id: 's-wing', site_name: 'S-Wing Help' });
-&lt;/script&gt;</code>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="studio-preview">
-                        <div id="preview-header" style="background:#0B2F61; color:white; padding:15px; font-weight:bold;">S-Wing Help</div>
-                        <div style="flex:1; padding:15px; font-size:13px; display:flex; flex-direction:column; gap:10px; background:#F1F5F9;">
-                            <div style="background:white; padding:10px; border-radius:6px; border:1px solid #E2E8F0; max-width:80%;">
-                                Xin chào! Hệ thống tự động xin kính chào quý khách.
-                            </div>
-                        </div>
-                        <div style="border-top:1px solid #E2E8F0; padding:10px; display:flex; background:white; align-items:center;">
-                            <span style="font-size:12px; color:#94A3B8; flex:1;">Nhập câu hỏi tìm kiếm...</span>
-                            <span id="preview-send-btn" style="color:#0B2F61; font-weight:bold; font-size:14px;">Gửi</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+        <div class="sidebar-brand">
+            <h2><i class="fa-solid fa-sliders"></i> FAQ Hub</h2>
+            <p>Central Operations Panel</p>
+        </div>
+        
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('sync-tab')"><i class="fa-solid fa-cloud-arrow-up"></i> Data Synchronization</button>
+            <button class="tab-btn" onclick="switchTab('analytics-tab'); loadAnalytics();"><i class="fa-solid fa-chart-line"></i> Search Analytics</button>
+            <button class="tab-btn" onclick="switchTab('tickets-tab'); loadTickets();"><i class="fa-solid fa-envelope"></i> Hòm thư Hỗ trợ</button>
+            <button class="tab-btn" onclick="switchTab('tester-tab')"><i class="fa-solid fa-vial"></i> Widget Sandbox</button>
         </div>
     </div>
 
-    <script>
-        const API_BASE_URL = "https://chatbotnew.onrender.com";
+    <div class="main-content">
+        <div class="top-bar">
+            <p class="system-desc">Cross-Platform FAQ Chatbot Data Sync & Optimization System</p>
+            <div class="server-status">
+                <span class="status-dot"></span>
+                <span><strong>Server Node:</strong> Operational</span>
+            </div>
+        </div>
 
-        // 1. Hàm chuyển đổi qua lại giữa 3 Màn hình Admin CMS
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
-            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+        <div id="global-alert" class="alert"></div>
+
+        <div id="sync-tab" class="tab-panel active">
+            <div class="form-group">
+                <label for="hub-site-select">1. Target Scope Allocation:</label>
+                <select id="hub-site-select" onchange="onSiteSelectionChange()">
+                    <option value="auto">🌟 Auto-Distribute All Channels (Unified Master File)</option>
+                    <option value="s-wing">S-Wing Portal (Academic Environment)</option>
+                    <option value="c-wing">C-Wing Platform (Alumni Network Ecosystem)</option>
+                    <option value="cansuke">Cansuke Node (Technical Support Center)</option>
+                    <option value="account-business">Account Business (Enterprise Software Suite)</option>
+                </select>
+            </div>
+
+            <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <i class="fa-solid fa-file-excel"></i>
+                <p>Drag and drop Master Excel (.xlsx) or CSV file here, or <b>browse desktop</b></p>
+                <div id="file-info"></div>
+                <input type="file" id="file-input" accept=".xlsx, .csv" style="display: none;" onchange="handleFileSelect(event)">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 32px; margin-bottom: 8px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #334155;"><i class="fa-solid fa-eye"></i> Filtered Records Preview (<span id="preview-count">0</span> rows)</h3>
+                <button id="btn-sync" class="btn" disabled onclick="submitSyncData()"><i class="fa-solid fa-rotate"></i> Commit Live Sync to Server</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 130px;">Data ID</th>
+                            <th style="width: 150px;">Category</th>
+                            <th style="width: 200px;">Search Keywords</th>
+                            <th>Resolved Answer (日本語)</th>
+                            <th style="width: 160px;">Redirection Destination</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preview-table-body">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #94A3B8; padding: 40px; font-style: italic;">No active data payload loaded. Import a master spreadsheet to generate previews.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="analytics-tab" class="tab-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Unresolved Query Logs (Missed Keywords)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted);">Real-time metrics tracking search terms submitted by users that yielded zero matches in the database.</p>
+                </div>
+                <button class="btn btn-refresh" onclick="loadAnalytics()"><i class="fa-solid fa-arrows-rotate"></i> Refresh Logs</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 280px;">Origin Platform Location</th>
+                            <th>Captured Unresolved Query</th>
+                            <th style="width: 220px; text-align: center;">Frequency Count (Hits)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analytics-table-body">
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: #94A3B8; padding: 40px;">Fetching logs from remote directory...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tickets-tab" class="tab-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Hòm thư Khách hàng gửi qua Chatbot</h3>
+                    <p style="font-size: 13px; color: var(--text-muted);">Thông tin và câu hỏi được gửi từ Form hỗ trợ trực tiếp trong khung chat.</p>
+                </div>
+                <button class="btn btn-refresh" onclick="loadTickets()"><i class="fa-solid fa-arrows-rotate"></i> Tải lại Hòm thư</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 150px;">Thời gian</th>
+                            <th style="width: 220px;">Thông tin khách hàng</th>
+                            <th>Nội dung câu hỏi</th>
+                            <th style="width: 120px;">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tickets-table-body">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #94A3B8; padding: 40px;">Đang tải dữ liệu Hòm thư...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tester-tab" class="tab-panel">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Live Embedded Widget Simulator</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Deploy and evaluate separate interface profiles, brand themes, system greetings, and contextual rules.</p>
             
-            document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
-            document.getElementById('current-title').innerText = event.currentTarget.innerText;
+            <div class="test-layout">
+                <div class="test-controls">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label>Select Deployment Framework Profile:</label>
+                        <select id="test-site-select">
+                            <option value="s-wing">S-Wing Academic Portal (Navy Blue)</option>
+                            <option value="c-wing">C-Wing Alumni Engine (Muted Dark Blue)</option>
+                            <option value="cansuke">Cansuke Infrastructure (Orange Theme)</option>
+                            <option value="account-business">Account Enterprise Suite (Green Theme)</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="launchWidgetTester()"><i class="fa-solid fa-comments"></i> Deploy Chat Widget Bubble</button>
+                </div>
+                <div class="test-sandbox" id="sandbox-area">
+                    <div class="sandbox-placeholder" id="sandbox-txt">
+                        <i class="fa-solid fa-layer-group" style="font-size: 52px; margin-bottom: 12px; color: #CBD5E1;"></i>
+                        <p style="font-size: 14px; font-weight: 500;">Isolated Preview Mode. Execute the trigger controller on the left panel to initialize rendering.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-            if(tabId === 'tab-analytics') { loadAnalyticsData(); }
+<script>
+    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin;
+    let rawCleanedData = [];
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+        
+        const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick').includes(tabId));
+        if(activeBtn) activeBtn.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function showAlert(type, message) {
+        const alertBox = document.getElementById('global-alert');
+        alertBox.className = `alert ${type}`;
+        alertBox.innerHTML = message;
+        alertBox.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => { alertBox.style.display = 'none'; }, 8000);
+    }
+
+    const dropZone = document.getElementById('drop-zone');
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.toggle('dragover', eventName === 'dragenter' || eventName === 'dragover'); }, false);
+    });
+    dropZone.addEventListener('drop', (e) => {
+        if(e.dataTransfer.files.length > 0) {
+            document.getElementById('file-input').files = e.dataTransfer.files;
+            processFile(e.dataTransfer.files[0]);
         }
+    });
 
-        // 2. MÀN HÌNH 1: Xử lý đọc tệp dữ liệu Excel bằng SheetJS
-        document.getElementById('excel-file-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+    function handleFileSelect(e) {
+        if(e.target.files.length > 0) processFile(e.target.files[0]);
+    }
 
-            document.getElementById('upload-status').innerText = "⏳ Đang phân tích dữ liệu tệp Excel...";
-            const reader = new FileReader();
-            
-            reader.onload = function(evt) {
-                const data = evt.target.result;
-                const workbook = XLSX.read(data, { type: 'binary' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Chuyển file Excel thành mảng dữ liệu JSON thô
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                displayExcelPreview(jsonData);
-                uploadExcelDataToServer(jsonData);
-            };
-            reader.readAsBinaryString(file);
+    function processFile(file) {
+        const fileInfo = document.getElementById('file-info');
+        fileInfo.innerText = `📄 Initializing stream: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        fileInfo.style.display = 'block';
+
+        const reader = new FileReader();
+        const isCsv = file.name.endsWith('.csv');
+
+        reader.onload = function(e) {
+            try {
+                let data = e.target.result;
+                let workbook = isCsv ? XLSX.read(data, { type: 'binary', codepage: 65001 }) : XLSX.read(new Uint8Array(data), { type: 'array' });
+                const jsonRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+                if(jsonRows.length === 0) return showAlert('error', 'The uploaded dataset is empty.');
+
+                rawCleanedData = jsonRows.map(row => {
+                    const findVal = (keys) => { const k = Object.keys(row).find(x => keys.includes(x.toLowerCase().trim())); return k ? row[k] : ''; };
+                    return {
+                        data_id: String(findVal(['data_id', 'id', 'mã', 'ma_id'])).trim(),
+                        category: String(findVal(['category', 'danh mục', 'danhmuc', 'loại'])).trim(),
+                        keywords: String(findVal(['keywords', 'từ khóa', 'tukhoa', 'keyword'])).trim(),
+                        answer_text: String(findVal(['answer_text', 'nội dung', 'câu trả lời', 'answer'])).trim(),
+                        redirect_url: String(findVal(['redirect_url', 'url', 'đường dẫn', 'link'])).trim(),
+                        ai_context: String(findVal(['ai_context', 'ngữ cảnh', 'context']))
+                    };
+                }).filter(item => item.data_id && item.answer_text && item.data_id !== 'undefined');
+
+                renderPreviewTable();
+            } catch (err) { showAlert('error', 'Execution interrupted: ' + err.message); }
+        };
+
+        if(isCsv) reader.readAsText(file, "UTF-8"); else reader.readAsArrayBuffer(file);
+    }
+
+    function onSiteSelectionChange() { if(rawCleanedData.length > 0) renderPreviewTable(); }
+
+    function renderPreviewTable() {
+        const selectedSiteId = document.getElementById('hub-site-select').value;
+        const tbody = document.getElementById('preview-table-body');
+        tbody.innerHTML = '';
+
+        const filtered = rawCleanedData.filter(item => {
+            if (selectedSiteId === 'auto') return true; 
+            const idUpper = item.data_id.toUpperCase();
+            if (selectedSiteId === 's-wing') return idUpper.includes('SW');
+            if (selectedSiteId === 'c-wing') return idUpper.includes('CW');
+            if (selectedSiteId === 'cansuke') return idUpper.includes('CS') || idUpper.includes('CANSUKE');
+            return idUpper.includes('AB') || idUpper.includes('ACCOUNT');
         });
 
-        // Hiển thị dữ liệu Excel vừa quét lên bảng xem trước
-        function displayExcelPreview(data) {
-            const tbody = document.querySelector('#excel-preview-table tbody');
-            tbody.innerHTML = "";
-            
-            if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">File Excel trống hoặc không đúng định dạng!</td></tr>`;
-                return;
-            }
-
-            data.slice(0, 15).forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><b>${row.data_id || '---'}</b></td>
-                    <td>${row.category || '---'}</td>
-                    <td>${row.keywords || '---'}</td>
-                    <td>${row.answer_text || '---'}</td>
-                    <td><small>${row.redirect_url || '---'}</small></td>
-                `;
-                tbody.appendChild(tr);
-            });
+        document.getElementById('preview-count').innerText = filtered.length;
+        if(filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #EF4444; padding: 24px;">No matching records.</td></tr>`;
+            document.getElementById('btn-sync').disabled = true; return;
         }
 
-        // Đẩy mảng JSON vừa đọc từ file Excel lên thẳng API Backend
-        function uploadExcelDataToServer(faqList) {
-            const siteId = document.getElementById('hub-site-select').value;
-            
-            fetch(`${API_BASE_URL}/api/v1/admin/faq/sync`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    staff_email: "operator_admin@central.jp", // Giả lập email nhân viên đăng nhập
-                    site_id: siteId,
-                    faq_list: faqList
-                })
-            })
-            .then(res => res.json())
-            .then(resData => {
-                if(resData.success) {
-                    document.getElementById('upload-status').innerHTML = "✅ Đồng bộ hóa kho dữ liệu FAQ từ file Excel lên PostgreSQL thành công!";
-                } else {
-                    document.getElementById('upload-status').innerText = "❌ Lỗi đồng bộ: " + resData.error;
-                }
-            })
-            .catch(err => {
-                document.getElementById('upload-status').innerText = "❌ Không thể kết nối Backend Node.js. Hãy bật lệnh 'node server.js' trước!";
-            });
-        }
+        filtered.forEach(item => {
+            let badgeClass = 'sw'; let idUpper = item.data_id.toUpperCase();
+            if(idUpper.includes('CW')) badgeClass = 'cw'; else if(idUpper.includes('CS')) badgeClass = 'cs'; else if(idUpper.includes('AB')) badgeClass = 'ab';
+            tbody.innerHTML += `<tr><td><span class="badge ${badgeClass}">${item.data_id}</span></td><td><b>${item.category || 'Chung'}</b></td><td style="color:#475569; font-size:12px;">${item.keywords}</td><td style="white-space: pre-line;">${item.answer_text}</td><td><span style="color:#2563EB; font-size:11px;">${item.redirect_url || '-'}</span></td></tr>`;
+        });
+        document.getElementById('btn-sync').disabled = false;
+    }
 
-        // 3. MÀN HÌNH 2: Gọi API lấy log từ khóa trượt thời gian thực
-        function loadAnalyticsData() {
-            const tbody = document.getElementById('miss-logs-table-body');
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">⏳ Đang đồng bộ danh sách dữ liệu mới từ Server...</td></tr>`;
+    function submitSyncData() {
+        const selectedSiteId = document.getElementById('hub-site-select').value;
+        const btn = document.getElementById('btn-sync');
+        btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Executing CSDL Overwrite...`;
 
-            fetch(`${API_BASE_URL}/api/v1/admin/analytics`)
-            .then(res => res.json())
-            .then(data => {
-                tbody.innerHTML = "";
-                if(!data.success || data.top_missed_keywords.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94A3B8;">🎉 Tuyệt vời! Hiện tại không có từ khóa nào bị khách tra cứu trượt.</td></tr>`;
-                    return;
-                }
+        const filteredList = rawCleanedData.filter(item => {
+            if (selectedSiteId === 'auto') return true;
+            const idUpper = item.data_id.toUpperCase();
+            if (selectedSiteId === 's-wing') return idUpper.includes('SW');
+            if (selectedSiteId === 'c-wing') return idUpper.includes('CW');
+            if (selectedSiteId === 'cansuke') return idUpper.includes('CS') || idUpper.includes('CANSUKE');
+            return idUpper.includes('AB') || idUpper.includes('ACCOUNT');
+        });
 
-                data.top_missed_keywords.forEach(log => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><span class="badge" style="background:#E2E8F0; color:#475569;">${log.site_id.toUpperCase()}</span></td>
-                        <td><b style="color:#EF4444;">"${log.keyword_missed}"</b></td>
-                        <td><b>${log.count}</b> lần tìm kiếm hụt</td>
-                        <td><span class="badge badge-miss">Chờ bổ sung Excel</span></td>
-                    `;
-                    tbody.appendChild(tr);
+        fetch(`${API_BASE}/api/v1/admin/faq/sync`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ site_id: selectedSiteId, faq_list: filteredList })
+        }).then(res => res.json()).then(resData => {
+            resData.success ? showAlert('success', 'Database synchronization accomplished successfully.') : showAlert('error', 'Execution fault: ' + resData.message);
+        }).finally(() => { btn.innerHTML = `<i class="fa-solid fa-rotate"></i> Commit Live Sync`; btn.disabled = false; });
+    }
+
+    function loadAnalytics() {
+        const tbody = document.getElementById('analytics-table-body');
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #94A3B8; padding: 24px;">Retrieving logs...</td></tr>`;
+        fetch(`${API_BASE}/api/v1/admin/analytics`).then(res => res.json()).then(data => {
+            tbody.innerHTML = '';
+            if(data.success && data.top_missed_keywords.length > 0) {
+                data.top_missed_keywords.forEach(row => {
+                    tbody.innerHTML += `<tr><td><strong>${String(row.site_id).toUpperCase()}</strong></td><td style="color:#EF4444; font-weight:600;">${row.keyword_missed}</td><td style="text-align:center; font-weight:700;">${row.count} hits</td></tr>`;
                 });
-            })
-            .catch(() => {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#EF4444;">❌ Lỗi kết nối API lấy báo cáo!</td></tr>`;
-            });
-        }
+            } else { tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #16A34A; padding: 32px;">No unresolved user search strings logged.</td></tr>`; }
+        });
+    }
 
-        // 4. MÀN HÌNH 3: Đồng bộ thay đổi hiển thị mã nhúng và màu sắc Studio
-        function updateStudioPreview() {
-            const siteId = document.getElementById('studio-site-select').value;
-            const header = document.getElementById('preview-header');
-            const sendBtn = document.getElementById('preview-send-btn');
-            const codeBlock = document.getElementById('embed-code-block');
-            
-            let color = "#0B2F61";
-            let name = "S-Wing Help";
-            
-            if(siteId === 'c-wing') { color = "#1A5276"; name = "C-Wing Community"; }
-            if(siteId === 'cansuke') { color = "#E67E22"; name = "Cansuke Support"; }
-            if(siteId === 'account') { color = "#27AE60"; name = "Account Software"; }
-            
-            header.style.background = color;
-            header.innerText = name;
-            sendBtn.style.color = color;
-            
-            // Cập nhật lại chuỗi mã nhúng động tương ứng
-            codeBlock.innerHTML = `&lt;script src="https://chatbot-central-api.onrender.com/widget_embed.js"&gt;&lt;/script&gt;
-&lt;script&gt;
-    window.initCentralChatbot({ site_id: '${siteId}', site_name: '${name}' });
-&lt;/script&gt;`;
-        }
-    </script>
+    // 👉 HÀM LẤY VÀ HIỂN THỊ HÒM THƯ (CÓ THÔNG TIN KHÁCH)
+    function loadTickets() {
+        const tbody = document.getElementById('tickets-table-body');
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94A3B8; padding: 24px;">Đang tải danh sách Hòm thư...</td></tr>`;
+        
+        fetch(`${API_BASE}/api/v1/admin/tickets`).then(res => res.json()).then(data => {
+            tbody.innerHTML = '';
+            if(data.success && data.tickets.length > 0) {
+                data.tickets.forEach(ticket => {
+                    const dateObj = new Date(ticket.created_at);
+                    const timeStr = dateObj.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="color: #64748B; font-size: 12px;">${timeStr}<br><span style="font-size: 10px; font-weight: 600; background: #E2E8F0; padding: 2px 6px; border-radius: 4px; color: #334155; margin-top: 4px; display: inline-block;">${String(ticket.site_id).toUpperCase()}</span></td>
+                            <td>
+                                <b>${ticket.customer_name || 'Khách ẩn danh'}</b><br>
+                                <span style="color: #3B82F6; font-size: 12px;"><i class="fa-solid fa-envelope"></i> ${ticket.customer_email || 'N/A'}</span><br>
+                                <span style="color: #94A3B8; font-size: 11px;"><i class="fa-solid fa-building"></i> ${ticket.company_name || 'N/A'}</span>
+                            </td>
+                            <td style="font-weight: 500; color: #1E293B;">${ticket.question}</td>
+                            <td><span class="badge pending">${ticket.status}</span></td>
+                        </tr>
+                    `;
+                });
+            } else { 
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748B; padding: 32px;"><i class="fa-solid fa-inbox"></i> Hòm thư hiện đang trống.</td></tr>`; 
+            }
+        });
+    }
+
+    function launchWidgetTester() {
+        const selectedTestSite = document.getElementById('test-site-select').value;
+        const sandbox = document.getElementById('sandbox-area');
+        document.getElementById('sandbox-txt').style.display = 'none';
+        const oldWidget = sandbox.querySelector('#central-chat-widget');
+        if(oldWidget) oldWidget.remove();
+
+        const names = { 's-wing': 'S-Wing Portal', 'c-wing': 'C-Wing Community', 'cansuke': 'Cansuke Helpdesk', 'account-business': 'Account Enterprise' };
+        let scriptTag = document.getElementById('embedded-tester-script');
+        if(scriptTag) scriptTag.remove();
+
+        scriptTag = document.createElement('script');
+        scriptTag.id = 'embedded-tester-script';
+        scriptTag.src = `${API_BASE}/widget_embed.js?t=${Date.now()}`;
+        
+        scriptTag.onload = function() {
+            if(typeof window.initCentralChatbot === 'function') {
+                window.initCentralChatbot({ site_id: selectedTestSite, site_name: names[selectedTestSite] });
+                const realCreatedWidget = document.getElementById('central-chat-widget');
+                if(realCreatedWidget) {
+                    realCreatedWidget.style.position = 'absolute';
+                    realCreatedWidget.style.bottom = '20px';
+                    realCreatedWidget.style.right = '20px';
+                    sandbox.appendChild(realCreatedWidget);
+                }
+            }
+        };
+        document.body.appendChild(scriptTag);
+    }
+</script>
 </body>
 </html>
