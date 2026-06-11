@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS faq_master (
     keywords TEXT NOT NULL,              -- Chuỗi từ khóa cách nhau bằng dấu phẩy phục vụ thuật toán so khớp ILIKE
     answer_text TEXT NOT NULL,           -- Nội dung câu trả lời cố định chính xác bằng tiếng Nhật (です・ます調)
     redirect_url TEXT,                   -- Link điều hướng trang đích (Bắt đầu bằng http:// hoặc https://)
+    reference_note TEXT,
     ai_context TEXT,                     -- CỘT CẤU TRÚC MỞ: Lưu ngữ cảnh nghiệp vụ chờ Phase 2 kích hoạt AI RAG
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
